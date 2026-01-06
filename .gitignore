@@ -1,0 +1,8 @@
+.env
+data
+
+Lib
+Scripts
+.lock
+CACHEDIR.TAG
+pyvenv.cfg

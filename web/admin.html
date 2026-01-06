@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>admin</title>
+
+    <style>
+      .box {
+        border: 1px solid black;
+        width: 100%;
+        max-width: 800px;
+        padding: 10px;
+
+        h3 {
+          margin-top: 0;
+        }
+      }
+
+      .box:empty {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <form action="/admin" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="pw" value="" id="pw-input" />
+      <div class="box" id="message-box" hidden>
+        <span id="message-box-content"></span>
+        <a id="message-box-close" style="float: right">close</a>
+      </div>
+
+      <h1>ipimg</h1>
+      <div class="box">
+        <h3>Upload image</h3>
+        <label for="img">Image: </label>
+        <input type="file" name="img" />
+
+        <label for="name-ovd">Filename override:</label>
+        <input type="text" name="name-ovd" />
+
+        <br /><br />
+
+        <input type="submit" name="action-upload" value="Upload" />
+      </div>
+      <br />
+
+      <div class="box" id="data-box"></div>
+
+      <h3>View images</h3>
+      <div class="box">
+        <ul id="image-list"></ul>
+      </div>
+    </form>
+
+    <script>
+      const urlparams = new URLSearchParams(location.search);
+      window.apw = urlparams.get("pw");
+
+      document.getElementById("pw-input").value = window.apw;
+
+      const message = urlparams.get("msg");
+      if (message && message.length > 1) {
+        const isError = urlparams.get("msgiserror") == "true";
+        document.getElementById("message-box-content").innerText = message;
+        document.getElementById("message-box").hidden = false;
+
+        const color = isError ? "red" : "blue";
+        document.getElementById(
+          "message-box"
+        ).style = `border-color:${color};color:${color}`;
+
+        document.getElementById("message-box-close").href = `/admin?pw=${
+          window.apw
+        }&ts=${Date.now()}`;
+      }
+    </script>
+    <script>
+      const formatDate = (date) => new Date(date * 1000).toLocaleString();
+      const toByIP = (acc) => {
+        const ips = {};
+        for (a of acc) {
+          if (ips[a.ip]) {
+            ips[a.ip]++;
+          } else {
+            ips[a.ip] = 1;
+          }
+        }
+        return Object.entries(ips);
+      };
+
+      const openImage = (image) => {
+        document.getElementById("data-box").innerHTML = `
+<h3>File name: <span style="color: blue">${image.name}</span></h3>
+<div class="box">
+  <img src="/i/${image.name}?noadd=${window.apw}" style="max-height: 300px" />
+</div>
+<div class="box">
+  <h4>Accesses</h4>
+  <ul>
+    ${image.accesses.map(
+      (acc) => `
+<li>${formatDate(acc.ts)}: ${acc.ip}</li>
+    `
+    )}
+  </ul>
+  <h4>By IP</h4>
+  <ul>${toByIP(image.accesses).map(
+    ([ip, amt]) => `
+<li>${ip}: ${amt}</li>
+  `
+  )}</ul>
+</div>
+<button type="button" onclick="document.getElementById('data-box').innerHTML = ''">Done</button>
+        `;
+      };
+
+      fetch("/admin/get_images?pw=" + window.apw)
+        .then((r) => r.json())
+        .then(({ images }) => {
+          if (images.length === 0) {
+            document.getElementById("image-list").innerHTML = "None";
+            return;
+          }
+
+          const list = document.getElementById("image-list");
+          for (const image of images) {
+            const ele = document.createElement("li");
+            const latestAccess = image.accesses.at(-1);
+            ele.innerHTML = `<strong>${
+              image.name
+            }</strong> | Created: ${formatDate(image.created)} |
+            Last access: ${
+              latestAccess ? formatDate(latestAccess.ts) : "No accesses"
+            } | `;
+
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.onclick = () => openImage(image);
+            btn.innerText = "View";
+
+            ele.append(btn);
+            list.append(ele);
+          }
+        });
+    </script>
+  </body>
+</html>
