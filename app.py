@@ -26,6 +26,15 @@ def save_json(obj, fp):
 
 images = load_json(data_directory / "images.json")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+IP_ADDR_HEADER = os.environ.get("IP_ADDR_HEADER")
+
+
+def get_ip():
+    if IP_ADDR_HEADER is not None:
+        return request.headers.get(IP_ADDR_HEADER)
+    else:
+        return request.remote_addr
+
 
 if not ADMIN_PASSWORD:
     raise Exception("Give me admin password please")
@@ -36,7 +45,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def index_route():
-    return request.remote_addr or ""
+    return get_ip() or ""
 
 
 def admin_page_redir(pw: str, msg: str, err=False):
@@ -131,9 +140,7 @@ def image_route(image: str):
                 newimages.append(previmage)
                 continue
             newimage = previmage.copy()
-            newimage["accesses"].append(
-                {"ip": request.remote_addr, "ts": round(time.time())}
-            )
+            newimage["accesses"].append({"ip": get_ip(), "ts": round(time.time())})
             newimages.append(newimage)
         images = newimages
         save_json(images, data_directory / "images.json")
