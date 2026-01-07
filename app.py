@@ -142,4 +142,9 @@ def image_route(image: str):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    env_port = os.getenv("SERVER_PORT")
+    app.run(
+        os.getenv("SERVER_HOST"),
+        int(env_port) if env_port else None,
+        debug=(os.getenv("SERVER_DEBUG") == "yes"),
+    )
